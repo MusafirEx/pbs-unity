@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokémon Battle (PeerJS)</title>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f9f9f9; margin: 2rem; }
+    .battle-area { display: none; flex-direction: column; align-items: center; margin: 2rem auto; max-width: 600px; }
+    .pokemon { width: 80px; }
+    .hp-bar { background: red; height: 12px; width: 100%; position: relative; }
+    .hp-fill { background: green; height: 100%; width: 100%; transition: width 0.3s; }
+    #battleLog { white-space: pre-line; border: 1px solid #ccc; padding: 1rem; height: 200px; overflow-y: scroll; background: #fff; display: none; }
+    .ready-area, .setup-area, .move-area { margin-top: 2rem; }
+    button { margin: 0.5rem; padding: 0.75rem 1.25rem; font-size: 1rem; min-width: 120px; }
+    select, input[type="text"] { padding: 0.5rem; margin-top: 1rem; width: 80%; max-width: 300px; }
+    .name-label { font-weight: bold; margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Pokémon Battle - PeerJS</h1>
+
+  <div class="setup-area">
+    <p>Your ID: <span id="my-id">...</span></p>
+    <input type="text" id="peer-id" placeholder="Enter opponent ID" />
+    <input type="text" id="playerName" placeholder="Your name" />
+    <label for="playerSelect">Choose your Pokémon:</label>
+    <select id="playerSelect" onchange="updatePlayerSprite()">
+      <option value="001b">Bulbasaur</option>
+      <option value="004b">Charmander</option>
+      <option value="007b">Squirtle</option>
+    </select>
+    <button onclick="connectToPeer()">Connect</button>
+    <button onclick="requestFullscreen()">Fullscreen</button>
+  </div>
+
+  <div class="ready-area" style="display:none">
+    <button onclick="sendReady()">I'm Ready</button>
+    <p id="readyStatus">Waiting for opponent...</p>
+  </div>
+
+  <div class="battle-area" id="battleArea">
+    <div>
+      <div class="name-label" id="enemyName">Enemy</div>
+      <img id="enemySprite" class="pokemon" src="Assets/Resources/Battle/Graphics/Pokemon/025.png" alt="Enemy">
+      <div class="hp-bar"><div id="enemyHP" class="hp-fill"></div></div>
+    </div>
+    <div>
+      <div class="name-label" id="myName">You</div>
+      <img id="playerSprite" class="pokemon" src="Assets/Resources/Battle/Graphics/Pokemon/001b.png" alt="Player">
+      <div class="hp-bar"><div id="playerHP" class="hp-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="move-area" id="moveArea" style="display:none">
+    <h2>Choose Your Move</h2>
+    <div id="moveButtons"></div>
+  </div>
+
+  <h3>Battle Log</h3>
+  <div id="battleLog"></div>
+
+  <script>
+    const MAX_HP = 100;
+    let myHP = MAX_HP;
+    let enemyHP = MAX_HP;
+    let myPokemon = '001b';
+    let myDisplayName = '';
+    let isReady = false;
+    let opponentReady = false;
+    let moves = [];
+
+    async function loadPokemonData() {
+      const pokeMap = {
+        '001b': 'bulbasaur',
+        '004b': 'charmander',
+        '007b': 'squirtle'
+      };
+      const key = document.getElementById('playerSelect').value;
+      const name = pokeMap[key];
+      const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
+      const data = await res.json();
+      moves = data.moves.slice(0, 4).map(m => m.move.name);
+      const moveButtons = document.getElementById('moveButtons');
+      moveButtons.innerHTML = '';
+      moves.forEach(move => {
+        const btn = document.createElement('button');
+        btn.textContent = move;
+        btn.onclick = () => sendMove(move);
+        moveButtons.appendChild(btn);
+      });
+    }
+
+    const log = msg => {
+      const logBox = document.getElementById('battleLog');
+      logBox.textContent += `\n${msg}`;
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    const updateHP = () => {
+      document.getElementById('playerHP').style.width = (myHP / MAX_HP * 100) + '%';
+      document.getElementById('enemyHP').style.width = (enemyHP / MAX_HP * 100) + '%';
+    };
+
+    const updatePlayerSprite = () => {
+      myPokemon = document.getElementById('playerSelect').value;
+      document.getElementById('playerSprite').src = `Assets/Resources/Battle/Graphics/Pokemon/${myPokemon}.png`;
+      if (conn && conn.open) sendPlayerInfo();
+      loadPokemonData();
+    };
+
+    const sendPlayerInfo = () => {
+      myDisplayName = document.getElementById('playerName').value || 'You';
+      document.getElementById('myName').textContent = myDisplayName;
+      conn.send({ type: 'info', sprite: myPokemon, name: myDisplayName });
+    };
+
+    const peer = new Peer();
+    let conn = null;
+
+    peer.on('open', id => {
+      document.getElementById('my-id').textContent = id;
+      log(`Your ID: ${id}`);
+    });
+
+    peer.on('connection', c => {
+      conn = c;
+      log(`Connected to ${conn.peer}`);
+      conn.on('data', handleData);
+      document.querySelector('.ready-area').style.display = 'block';
+      sendPlayerInfo();
+    });
+
+    function connectToPeer() {
+      const otherId = document.getElementById('peer-id').value;
+      conn = peer.connect(otherId);
+      conn.on('open', () => {
+        log(`Connected to ${otherId}`);
+        document.querySelector('.ready-area').style.display = 'block';
+        sendPlayerInfo();
+      });
+      conn.on('data', handleData);
+    }
+
+    function sendReady() {
+      isReady = true;
+      document.getElementById('readyStatus').textContent = 'Waiting for opponent...';
+      conn.send({ type: 'ready' });
+      if (opponentReady) startBattle();
+    }
+
+    function startBattle() {
+      document.querySelector('.ready-area').style.display = 'none';
+      document.getElementById('battleArea').style.display = 'flex';
+      document.getElementById('battleLog').style.display = 'block';
+      document.getElementById('moveArea').style.display = 'block';
+      log("Battle started!");
+      updateHP();
+    }
+
+    function sendMove(move) {
+      if (!conn || !conn.open) return log('Not connected!');
+      log(`You used ${move}!`);
+      applyMove(move, false);
+      conn.send({ type: 'move', move });
+    }
+
+    function handleData(data) {
+      if (data.type === 'move') {
+        log(`Opponent used ${data.move}!`);
+        applyMove(data.move, true);
+      } else if (data.type === 'info') {
+        document.getElementById('enemySprite').src = `Assets/Resources/Battle/Graphics/Pokemon/${data.sprite.replace('b', '')}.png`;
+        document.getElementById('enemyName').textContent = data.name || 'Enemy';
+      } else if (data.type === 'ready') {
+        opponentReady = true;
+        if (isReady) startBattle();
+      }
+    }
+
+    function applyMove(move, fromOpponent) {
+      let damage = 10 + Math.floor(Math.random() * 10);
+      if (fromOpponent) {
+        myHP = Math.max(0, myHP - damage);
+        if (navigator.vibrate) navigator.vibrate(200);
+        if (myHP <= 0) log("You're knocked out!");
+      } else {
+        enemyHP = Math.max(0, enemyHP - damage);
+        if (enemyHP <= 0) log("Opponent is knocked out!");
+      }
+      updateHP();
+    }
+
+    function requestFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) elem.requestFullscreen();
+      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+    }
+
+    // Load moves on first selection
+    loadPokemonData();
+  </script>
+</body>
+</html>
