@@ -5,73 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pokémon Battle (PeerJS)</title>
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js">
-    let isMyTurn = true;
-
-    function startBattle() {
-      document.querySelector('.ready-area').style.display = 'none';
-      document.getElementById('battleArea').style.display = 'flex';
-      document.getElementById('battleLog').style.display = 'block';
-      document.getElementById('moveArea').style.display = 'block';
-      log("Battle started!");
-      updateHP();
-      isMyTurn = true;
-      updateMoveButtons();
-    }
-
-    function updateMoveButtons() {
-      const buttons = document.querySelectorAll('#moveButtons button');
-      buttons.forEach(btn => btn.disabled = !isMyTurn);
-    }
-
-    function sendMove(move) {
-      if (!conn || !conn.open) return log('Not connected!');
-      if (!isMyTurn) return log("Wait for your turn!");
-      log(`You used ${move}!`);
-      applyMove(move, false);
-      conn.send({ type: 'move', move });
-      isMyTurn = false;
-      updateMoveButtons();
-    }
-
-    function applyShakeEffect(spriteId) {
-      const el = document.getElementById(spriteId);
-      el.style.transition = 'transform 0.1s';
-      el.style.transform = 'translateX(-10px)';
-      setTimeout(() => {
-        el.style.transform = 'translateX(10px)';
-        setTimeout(() => {
-          el.style.transform = 'translateX(0px)';
-        }, 100);
-      }, 100);
-    }
-
-    function applyMove(move, fromOpponent) {
-      let damage = 10 + Math.floor(Math.random() * 10);
-      if (fromOpponent) {
-        myHP = Math.max(0, myHP - damage);
-        applyShakeEffect('playerSprite');
-        if (navigator.vibrate) navigator.vibrate(200);
-        if (myHP <= 0) log("You're knocked out!");
-        isMyTurn = true;
-        updateMoveButtons();
-      } else {
-        enemyHP = Math.max(0, enemyHP - damage);
-        applyShakeEffect('enemySprite');
-        if (enemyHP <= 0) log("Opponent is knocked out!");
-      }
-      updateHP();
-    }
-
-    function sendReady() {
-      isReady = true;
-      document.getElementById('readyStatus').textContent = 'Waiting for opponent...';
-      document.querySelector('.ready-area').style.display = 'none';
-      conn.send({ type: 'ready' });
-      if (opponentReady) startBattle();
-    }
-
-
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; background: #f9f9f9; margin: 2rem; }
     .battle-area { display: none; flex-direction: column; align-items: center; margin: 2rem auto; max-width: 600px; }
@@ -278,72 +212,6 @@
 
     // Load moves on first selection
     loadPokemonData();
-  
-    let isMyTurn = true;
-
-    function startBattle() {
-      document.querySelector('.ready-area').style.display = 'none';
-      document.getElementById('battleArea').style.display = 'flex';
-      document.getElementById('battleLog').style.display = 'block';
-      document.getElementById('moveArea').style.display = 'block';
-      log("Battle started!");
-      updateHP();
-      isMyTurn = true;
-      updateMoveButtons();
-    }
-
-    function updateMoveButtons() {
-      const buttons = document.querySelectorAll('#moveButtons button');
-      buttons.forEach(btn => btn.disabled = !isMyTurn);
-    }
-
-    function sendMove(move) {
-      if (!conn || !conn.open) return log('Not connected!');
-      if (!isMyTurn) return log("Wait for your turn!");
-      log(`You used ${move}!`);
-      applyMove(move, false);
-      conn.send({ type: 'move', move });
-      isMyTurn = false;
-      updateMoveButtons();
-    }
-
-    function applyShakeEffect(spriteId) {
-      const el = document.getElementById(spriteId);
-      el.style.transition = 'transform 0.1s';
-      el.style.transform = 'translateX(-10px)';
-      setTimeout(() => {
-        el.style.transform = 'translateX(10px)';
-        setTimeout(() => {
-          el.style.transform = 'translateX(0px)';
-        }, 100);
-      }, 100);
-    }
-
-    function applyMove(move, fromOpponent) {
-      let damage = 10 + Math.floor(Math.random() * 10);
-      if (fromOpponent) {
-        myHP = Math.max(0, myHP - damage);
-        applyShakeEffect('playerSprite');
-        if (navigator.vibrate) navigator.vibrate(200);
-        if (myHP <= 0) log("You're knocked out!");
-        isMyTurn = true;
-        updateMoveButtons();
-      } else {
-        enemyHP = Math.max(0, enemyHP - damage);
-        applyShakeEffect('enemySprite');
-        if (enemyHP <= 0) log("Opponent is knocked out!");
-      }
-      updateHP();
-    }
-
-    function sendReady() {
-      isReady = true;
-      document.getElementById('readyStatus').textContent = 'Waiting for opponent...';
-      document.querySelector('.ready-area').style.display = 'none';
-      conn.send({ type: 'ready' });
-      if (opponentReady) startBattle();
-    }
-
-
+  </script>
 </body>
 </html>
