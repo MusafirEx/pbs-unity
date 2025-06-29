@@ -43,12 +43,12 @@
   <div class="battle-area" id="battleArea">
     <div>
       <div class="name-label" id="enemyName">Enemy</div>
-      <img id="enemySprite" class="pokemon" src="Assets/Resources/Battle/Graphics/Pokemon/025.png" alt="Enemy">
+      <img id="enemySprite" class="pokemon" src="https://musafirex.github.io/pbs-unity/Assets/Resources/Battle/Graphics/Pokemon/025.png" alt="Enemy">
       <div class="hp-bar"><div id="enemyHP" class="hp-fill"></div></div>
     </div>
     <div>
       <div class="name-label" id="myName">You</div>
-      <img id="playerSprite" class="pokemon" src="Assets/Resources/Battle/Graphics/Pokemon/001b.png" alt="Player">
+      <img id="playerSprite" class="pokemon" src="https://musafirex.github.io/pbs-unity/Assets/Resources/Battle/Graphics/Pokemon/001b.png" alt="Player">
       <div class="hp-bar"><div id="playerHP" class="hp-fill"></div></div>
     </div>
   </div>
@@ -105,7 +105,7 @@
 
     const updatePlayerSprite = () => {
       myPokemon = document.getElementById('playerSelect').value;
-      document.getElementById('playerSprite').src = `Assets/Resources/Battle/Graphics/Pokemon/${myPokemon}.png`;
+      document.getElementById('playerSprite').src = `https://musafirex.github.io/pbs-unity/Assets/Resources/Battle/Graphics/Pokemon/${myPokemon}.png`;
       if (conn && conn.open) sendPlayerInfo();
       loadPokemonData();
     };
@@ -171,7 +171,7 @@
         log(`Opponent used ${data.move}!`);
         applyMove(data.move, true);
       } else if (data.type === 'info') {
-        document.getElementById('enemySprite').src = `Assets/Resources/Battle/Graphics/Pokemon/${data.sprite.replace('b', '')}.png`;
+        document.getElementById('enemySprite').src = `https://musafirex.github.io/pbs-unity/Assets/Resources/Battle/Graphics/Pokemon/${data.sprite}.png`;
         document.getElementById('enemyName').textContent = data.name || 'Enemy';
       } else if (data.type === 'ready') {
         opponentReady = true;
